@@ -1,0 +1,52 @@
+name: Continuous-Integration
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install tools (flake8, pytest) & deps
+        run: |
+          python -m pip install --upgrade pip
+          # instala herramientas globales de testing/lint
+          pip install flake8 pytest
+          # instala requirements si existen (tu app)
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint - errores críticos (fallará si hay E9,F63,F7,F82)
+        run: |
+          flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Lint - advertencias (no rompe build)
+        run: |
+          flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      #- name: Run tests (pytest)
+        #run: |
+          # Si no tienes tests todavía, comenta o elimina este paso.
+          #pytest -q
