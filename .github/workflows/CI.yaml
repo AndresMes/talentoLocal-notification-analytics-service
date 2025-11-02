@@ -40,12 +40,13 @@ jobs:
 
       - name: Lint - errores críticos (fallará si hay E9,F63,F7,F82)
         run: |
-          flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Lint justo donde está el código
+          flake8 notificationService/src notificationService/tests --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Lint - advertencias (no rompe build)
         run: |
-          flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
+          flake8 notificationService/src notificationService/tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          
       #- name: Run tests (pytest)
         #run: |
           # Si no tienes tests todavía, comenta o elimina este paso.
