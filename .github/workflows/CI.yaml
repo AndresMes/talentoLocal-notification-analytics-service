@@ -45,7 +45,7 @@ jobs:
 
       - name: Lint - advertencias (no rompe build)
         run: |
-          flake8 notificationService/src notificationService/tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 notificationService/src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
           
       #- name: Run tests (pytest)
         #run: |
