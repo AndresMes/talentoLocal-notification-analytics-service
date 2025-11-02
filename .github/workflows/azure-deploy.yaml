@@ -1,7 +1,7 @@
 name: Build and deploy Python app to Azure Web App (FastAPI)
 
 env:
-  AZURE_WEBAPP_NAME: talentolocal-notificaciones   
+  AZURE_WEBAPP_NAME: talentolocal-notifcaciones 
   PYTHON_VERSION: '3.11'
 
 on:
