@@ -36,10 +36,10 @@ jobs:
       #- name: Run tests
       #  run: pytest -q notificationService || true
 
-      - name: Archive project (only notificationService folder)
+      - name: Archive project (pack notificationService folder + requirements)
         run: |
           rm -f deploy.zip
-          zip -r deploy.zip notificationService
+          zip -r deploy.zip notificationService requirements.txt
           
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
