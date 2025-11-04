@@ -1,27 +1,33 @@
-from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional
+# notificationService/src/models/notificacion.py
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
 
-from .tipo_notificacion import TipoNotificacion
+from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from .tipo_notificacion import TipoNotificacion
 
 
 class Notificacion(SQLModel, table=True):
-    id_notificacion: Optional[int] = Field(default=None, primary_key=True)
+    __tablename__ = "notificaciones"
 
-    id_tipo_notificacion: int = Field(foreign_key="tiponotificacion.id_tipo_notificacion", nullable=False)
+    id_notificacion: int | None = Field(default=None, primary_key=True)
+
     id_usuario: int = Field(nullable=False)
     id_empresa: int = Field(nullable=False)
     id_oferta: int = Field(nullable=False)
 
     asunto: str
     mensaje: str
-    prioridad: Optional[str] = None
-    datos_adicionales: Optional[str] = None
+    prioridad: str | None = None
+    datos_adicionales: str | None = None
 
-    leida: bool = False 
-    fecha_lectura: Optional[datetime] = None
+    leida: bool = False
+    fecha_lectura: datetime | None = None
     fecha_creacion: datetime = Field(default_factory=datetime.utcnow)
-    fecha_expiracion: Optional[datetime] = None
+    fecha_expiracion: datetime | None = None
 
-    # Relación hacia TipoNotificacion
-    tipo_notificacion: Optional[TipoNotificacion] = Relationship(back_populates="notificaciones")
+    id_tipo_notificacion: Optional[int] = Field(default=None, foreign_key="tipo_notificaciones.id_tipo_notificacion")
+    tipo_notificacion: Optional["TipoNotificacion"] = Relationship(back_populates="notificaciones")
+    
