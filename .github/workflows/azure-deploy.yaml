@@ -1,7 +1,8 @@
 name: Build and deploy Python app to Azure Web App (FastAPI)
 
 env:
-  AZURE_WEBAPP_NAME: talentolocal-notifcaciones 
+  # <-- AJUSTA ESTE NOMBRE exactamente como aparece en Azure Portal (case-sensitive)
+  AZURE_WEBAPP_NAME: talentolocal-notifcaciones
   PYTHON_VERSION: '3.11'
 
 on:
@@ -15,7 +16,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -26,35 +26,39 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install build-time tools (optional)
         run: |
           python -m pip install --upgrade pip
-          # Ajusta la ruta a requirements si está en otra carpeta
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install wheel
 
-      # Opcional: ejecutar tests aquí
-      #- name: Run tests
-      #  run: pytest -q notificationService || true
+      - name: Validate requirements file exists
+        run: |
+          if [ ! -f requirements.txt ]; then echo "requirements.txt not found at repo root" && exit 1; fi
+          echo "requirements.txt found, showing top lines:"
+          head -n 20 requirements.txt || true
 
       - name: Archive project (pack notificationService folder + requirements)
         run: |
+          # create deploy.zip containing both the folder and the requirements file in the root of the zip
           rm -f deploy.zip
           zip -r deploy.zip notificationService requirements.txt
-          
-      - name: Upload artifact for deployment jobs
+
+      - name: Show created zip content (debug)
+        run: |
+          echo "Files in deploy.zip:"
+          unzip -l deploy.zip
+
+      - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: deploy.zip
 
   deploy:
-    permissions:
-      contents: none
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: 'Development'
-      # url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}  # opcional
+      name: Development
 
     steps:
       - name: Download artifact from build job
@@ -63,13 +67,19 @@ jobs:
           name: python-app
           path: .
 
-      - name: Unzip artifact
-        run: unzip -o deploy.zip -d deploy_package
+      - name: Show working dir and artifact files (debug)
+        run: |
+          echo "Working directory:"
+          pwd
+          echo "List files:"
+          ls -la
+          echo "Show deploy.zip details:"
+          unzip -l deploy.zip
 
-      - name: 'Deploy to Azure Web App (ZIP)'
+      - name: Deploy to Azure Web App (ZIP)
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./deploy_package
+          package: ./deploy.zip
