@@ -14,20 +14,18 @@ class Notificacion(SQLModel, table=True):
 
     id_notificacion: int | None = Field(default=None, primary_key=True)
 
-    id_usuario: int = Field(nullable=False)
-    id_empresa: int = Field(nullable=False)
-    id_oferta: int = Field(nullable=False)
+    id_usuario: int 
+    id_empresa: int 
 
-    asunto: str
+    tipo_notificacion: str = Field(nullable=False)
+    asunto: str = Field(nullable=False)
     mensaje: str
+
+    id_oferta: int = Field(nullable=False)
     prioridad: str | None = None
     datos_adicionales: str | None = None
 
-    leida: bool = False
+    leida: bool = Field(default=False) 
     fecha_lectura: datetime | None = None
     fecha_creacion: datetime = Field(default_factory=datetime.utcnow)
-    fecha_expiracion: datetime | None = None
-
-    id_tipo_notificacion: Optional[int] = Field(default=None, foreign_key="tipo_notificaciones.id_tipo_notificacion")
-    tipo_notificacion: Optional["TipoNotificacion"] = Relationship(back_populates="notificaciones")
     

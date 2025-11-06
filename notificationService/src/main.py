@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from sqlmodel import SQLModel
 from .config.db import engine
-from .models import Notificacion, TipoNotificacion
-from .routes.tipo_notificacion_router import tipo_notificaciones_router
+from .models import Notificacion
+from .routes.notificacion_router import router
 
 
 app = FastAPI(title="Notification-Service")
@@ -11,4 +11,4 @@ app = FastAPI(title="Notification-Service")
 def home():
     return {"message" : "Hola mundo"}
 
-app.include_router(tipo_notificaciones_router)
+app.include_router(router)
