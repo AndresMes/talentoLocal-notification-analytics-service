@@ -9,6 +9,16 @@ class NotificacionRepository:
     
     def get_by_id(self, session: Session, id_: UUID) -> Optional[Notificacion]:
         return session.get(Notificacion, id_)
+    
+    def get_by_id_usuario(self, session:Session, id_usuario: int) -> List[Notificacion]:
+        stmt = select(Notificacion).where(Notificacion.id_usuario == id_usuario)
+        results = session.exec(stmt)
+        return results.all()
+    
+    def get_by_id_empresa(self, session:Session, id_empresa: int) -> List[Notificacion]:
+        stmt = select(Notificacion).where(Notificacion.id_empresa == id_empresa)
+        results = session.exec(stmt)
+        return results.all()
 
     def list_all(self, session: Session, skip: int = 0, limit: int = 100) -> List[Notificacion]:
         stmt = select(Notificacion).order_by(Notificacion.fecha_creacion.desc()).offset(skip).limit(limit)

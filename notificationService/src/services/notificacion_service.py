@@ -23,7 +23,19 @@ class NotificacionService:
     def listar_no_leidas(self, session: Session) -> List[NotificacionResponseDTO]:
         results = self.notificacionRepository.get_by_status(session)
         return [NotificacionResponseDTO.model_validate(e) for e in results]
-
+    
+    def listar_dado_id_usuario(self, session: Session, id_usuario:int) -> List[NotificacionResponseDTO]:
+        
+        # Poner validación de ID cuando se tenga acceso
+        results = self.notificacionRepository.get_by_id_usuario(session, id_usuario)
+        return [NotificacionResponseDTO.model_validate(e) for e in results]
+    
+    def listar_dado_id_empresa(self, session: Session, id_empresa:int) -> List[NotificacionResponseDTO]:
+        
+        # Poner validación de ID cuando se tenga acceso
+        results = self.notificacionRepository.get_by_id_empresa(session, id_empresa)
+        return [NotificacionResponseDTO.model_validate(e) for e in results]
+    
     def create(self, session: Session, notificacionDto: NotificacionCreateDTO) -> NotificacionResponseDTO:
         notificacion = Notificacion(**notificacionDto.model_dump())
         nueva_notificacion = self.notificacionRepository.create(session, notificacion)

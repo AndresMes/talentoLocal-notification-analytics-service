@@ -59,6 +59,14 @@ def obtener_notificacion(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+    
+@router.get("/{id_usuario}/users/all", response_model=List[NotificacionResponseDTO], status_code=status.HTTP_200_OK)
+def obterner_todas_por_usuario(id_usuario:int, session: Session = Depends(get_db), service: NotificacionService = Depends(get_notificacion_service)):
+    return service.listar_dado_id_usuario(session, id_usuario)
+
+@router.get("/{id_empresa}/companies/all", response_model=List[NotificacionResponseDTO], status_code=status.HTTP_200_OK)
+def obtener_todas_por_empresa(id_empresa:int, session: Session = Depends(get_db), service: NotificacionService = Depends(get_notificacion_service)):
+    return service.listar_dado_id_empresa(session, id_empresa)
 
 
 @router.post("/", response_model=NotificacionResponseDTO, status_code=status.HTTP_201_CREATED)
