@@ -1,6 +1,7 @@
 from sqlmodel import Session
 from typing import List
 from uuid import UUID  
+from datetime import datetime
 from ..repositories.notificacion_repo import NotificacionRepository
 from ..dto.notificacion_dto import NotificacionCreateDTO, NotificacionResponseDTO
 from ..models.notificacion import Notificacion
@@ -64,6 +65,50 @@ class NotificacionService:
         
         notificacion_actualizada = self.notificacionRepository.update(session, entidad)
         return NotificacionResponseDTO.model_validate(notificacion_actualizada)
+    
+    def marcar_todas_leidas_usuario(self, session: Session, id_usuario: int) -> dict:
+        """Marcar todas las notificaciones de un usuario como leídas"""
+        notificaciones = self.notificacionRepository.get_no_leidas_by_usuario(session, id_usuario)
+        
+        if not notificaciones:
+            return {
+                "mensaje": "No hay notificaciones sin leer para este usuario",
+                "cantidad_actualizada": 0
+            }
+        
+        fecha_actual = datetime.now()
+        for notificacion in notificaciones:
+            notificacion.leida = True
+            notificacion.fecha_lectura = fecha_actual
+        
+        self.notificacionRepository.update_many(session, notificaciones)
+        
+        return {
+            "mensaje": f"Se marcaron {len(notificaciones)} notificaciones como leídas",
+            "cantidad_actualizada": len(notificaciones)
+        }
+
+    def marcar_todas_leidas_empresa(self, session: Session, id_empresa: int) -> dict:
+        """Marcar todas las notificaciones de una empresa como leídas"""
+        notificaciones = self.notificacionRepository.get_no_leidas_by_empresa(session, id_empresa)
+        
+        if not notificaciones:
+            return {
+                "mensaje": "No hay notificaciones sin leer para esta empresa",
+                "cantidad_actualizada": 0
+            }
+        
+        fecha_actual = datetime.now()
+        for notificacion in notificaciones:
+            notificacion.leida = True
+            notificacion.fecha_lectura = fecha_actual
+        
+        self.notificacionRepository.update_many(session, notificaciones)
+        
+        return {
+            "mensaje": f"Se marcaron {len(notificaciones)} notificaciones como leídas",
+            "cantidad_actualizada": len(notificaciones)
+        }
 
     def delete(self, session: Session, id_notificacion: UUID) -> None:  # UUID
         entidad = self.notificacionRepository.get_by_id(session, id_notificacion)
