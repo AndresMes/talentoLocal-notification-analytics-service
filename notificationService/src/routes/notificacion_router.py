@@ -72,6 +72,24 @@ def crear_notificacion(
     """
     return service.create(session, notificacion)
 
+@router.patch("/{id_notificacion}/marcar-leida", response_model=NotificacionResponseDTO, status_code=status.HTTP_200_OK)
+def marcar_notificacion_leida(
+    id_notificacion: UUID,
+    session: Session = Depends(get_db),
+    service: NotificacionService = Depends(get_notificacion_service)
+):
+    """
+    Marcar una notificación como leída
+    """
+    try:
+        return service.marcar_como_leida(session, id_notificacion)
+    except NotificacionNotFound as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
 
 @router.delete("/{id_notificacion}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_notificacion(
