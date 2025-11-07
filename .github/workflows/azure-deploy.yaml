@@ -28,47 +28,65 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: Install dependencies (build host)
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 
       - name: Show repo structure (debug)
         run: |
-          echo "Root files:"
+          echo "=== Estructura del repositorio ==="
           ls -la
-          echo "notificationService tree (top-level):"
-          ls -R notificationService | sed -n '1,200p' || true
+          echo ""
+          echo "=== Contenido de notificationService ==="
+          ls -la notificationService/
+          echo ""
+          echo "=== Contenido de notificationService/src ==="
+          ls -la notificationService/src/ || echo "No existe src/"
 
-      - name: Archive project (pack notificationService contents + requirements)
+      - name: Create deployment package
         run: |
-          rm -f deploy.zip
-          if [ ! -d notificationService ]; then echo "ERROR: notificationService no existe"; ls -la; exit 1; fi
-
-          # Zippeamos el contenido de notificationService como RAÍZ del zip
-          cd notificationService
-          zip -r ../deploy.zip . -x "__pycache__/*" ".venv/*" ".git/*"
-          cd ..
-
-          # Añadimos requirements.txt a la raíz del zip si existe
-          if [ -f requirements.txt ]; then
-            zip -u deploy.zip requirements.txt
-          else
-            echo "ADVERTENCIA: requirements.txt no encontrado en la raíz"
+          echo "=== Creando paquete de deployment ==="
+          
+          # Verificar que notificationService existe
+          if [ ! -d notificationService ]; then
+            echo "ERROR: notificationService no existe"
+            ls -la
+            exit 1
           fi
+          
+          # Crear directorio temporal para el deployment
+          mkdir -p deployment_package
+          
+          # Copiar TODO el contenido de notificationService a la raíz del package
+          cp -r notificationService/* deployment_package/
+          
+          # Copiar requirements.txt a la raíz del package
+          cp requirements.txt deployment_package/
+          
+          echo ""
+          echo "=== Estructura del paquete de deployment ==="
+          ls -la deployment_package/
+          
+          # Crear el ZIP desde dentro del directorio
+          cd deployment_package
+          zip -r ../deploy.zip . -x "*__pycache__*" "*/.venv/*" "*/.git/*" "*/.vscode/*"
+          cd ..
+          
+          echo ""
+          echo "=== Contenido del deploy.zip ==="
+          unzip -l deploy.zip | head -50
+          
+          echo ""
+          echo "=== Tamaño del archivo ==="
+          ls -lh deploy.zip
 
-          echo "Contenido del zip creado (verifica que aparezcan src/... y requirements.txt):"
-          unzip -l deploy.zip
-
-          # tamaño del zip por si quieres comparar con el artifact upload
-          echo "Tamaño del deploy.zip:"
-          stat -c '%s %n' deploy.zip || ls -la deploy.zip
-
-      - name: Upload artifact for deployment jobs
+      - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: deploy.zip
+          retention-days: 1
 
   deploy:
     permissions:
@@ -85,24 +103,36 @@ jobs:
           name: python-app
           path: .
 
-      - name: Verify downloaded artifact (debug)
+      - name: Verify downloaded artifact
         run: |
-          echo "Workspace files after download:"
+          echo "=== Archivos descargados ==="
           ls -la
-          if [ -f deploy.zip ]; then
-            echo "deploy.zip encontrado. listado:"
-            unzip -l deploy.zip
-            echo "tamaño del zip descargado:"
-            stat -c '%s %n' deploy.zip || ls -la deploy.zip
-          else
-            echo "ERROR: deploy.zip no encontrado"; exit 1
+          
+          if [ ! -f deploy.zip ]; then
+            echo "ERROR: deploy.zip no encontrado"
+            exit 1
           fi
+          
+          echo ""
+          echo "=== Contenido del ZIP (primeras 30 líneas) ==="
+          unzip -l deploy.zip | head -30
+          
+          echo ""
+          echo "=== Tamaño del archivo ==="
+          ls -lh deploy.zip
 
-      - name: 'Deploy to Azure Web App (ZIP)'
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          # IMPORTANTE: pasar el .zip directamente para usar zip-deploy (Kudu)
           package: ./deploy.zip
+
+      - name: Deployment summary
+        run: |
+          echo "=== Deployment completado ==="
+          echo "App URL: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo ""
+          echo "Para ver los logs en tiempo real, ejecuta:"
+          echo "az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group <tu-resource-group>"
