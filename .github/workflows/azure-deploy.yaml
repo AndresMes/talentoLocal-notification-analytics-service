@@ -55,23 +55,8 @@ jobs:
             exit 1
           fi
           
-          # Crear directorio temporal para el deployment
-          mkdir -p deployment_package
-          
-          # Copiar TODO el contenido de notificationService a la raíz del package
-          cp -r notificationService/* deployment_package/
-          
-          # Copiar requirements.txt a la raíz del package
-          cp requirements.txt deployment_package/
-          
-          echo ""
-          echo "=== Estructura del paquete de deployment ==="
-          ls -la deployment_package/
-          
-          # Crear el ZIP desde dentro del directorio
-          cd deployment_package
-          zip -r ../deploy.zip . -x "*__pycache__*" "*/.venv/*" "*/.git/*" "*/.vscode/*"
-          cd ..
+          # Crear el ZIP MANTENIENDO la carpeta notificationService
+          zip -r deploy.zip notificationService requirements.txt -x "*__pycache__*" "*/.venv/*" "*/.git/*" "*/.vscode/*"
           
           echo ""
           echo "=== Contenido del deploy.zip ==="
