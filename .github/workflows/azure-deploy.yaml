@@ -36,15 +36,27 @@ jobs:
       #- name: Run tests
       #  run: pytest -q notificationService || true
 
-      - name: Archive project (pack notificationService folder + requirements)
+      - name: Archive project (pack notificationService contents + requirements)
         run: |
           rm -f deploy.zip
-          # copia requirements dentro del folder para que quede junto al código
-          cp requirements.txt notificationService/ || true
-          # metemos el contenido de notificationService en la raíz del zip
+          # Verificamos que la carpeta exista
+          if [ ! -d notificationService ]; then echo "ERROR: notificationService no existe"; ls -la; exit 1; fi
+
+          # Creamos el zip con el contenido de notificationService como raíz del zip
           cd notificationService
-          zip -r ../deploy.zip .
+          zip -r ../deploy.zip . -x "__pycache__/*" ".venv/*" ".git/*"
           cd ..
+
+          # Añadimos requirements.txt (si existe) a la raíz del zip
+          if [ -f requirements.txt ]; then
+            zip -u deploy.zip requirements.txt
+          else
+            echo "ADVERTENCIA: requirements.txt no encontrado en la raíz"
+          fi
+
+          # Listamos contenido para verificar
+          echo "Contenido del zip:"
+          unzip -l deploy.zip
           
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
