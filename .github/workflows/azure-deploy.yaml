@@ -1,7 +1,8 @@
 name: Build and deploy Python app to Azure Web App (FastAPI)
 
 env:
-  AZURE_WEBAPP_NAME: talentolocal-notifcaciones 
+  # REVISAR este nombre: copia exactamente el nombre de tu Web App en Azure (sin tildes si no corresponde)
+  AZURE_WEBAPP_NAME: talentolocal-notifcaciones
   PYTHON_VERSION: '3.11'
 
 on:
@@ -19,6 +20,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python version
         uses: actions/setup-python@v4
@@ -26,38 +29,38 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install dependencies (build host)
         run: |
           python -m pip install --upgrade pip
-          # Ajusta la ruta a requirements si está en otra carpeta
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # Opcional: ejecutar tests aquí
-      #- name: Run tests
-      #  run: pytest -q notificationService || true
+      - name: Show repo structure (debug)
+        run: |
+          echo "Root files:"
+          ls -la
+          echo "notificationService tree:"
+          ls -R notificationService || true
 
       - name: Archive project (pack notificationService contents + requirements)
         run: |
           rm -f deploy.zip
-          # Verificamos que la carpeta exista
           if [ ! -d notificationService ]; then echo "ERROR: notificationService no existe"; ls -la; exit 1; fi
 
-          # Creamos el zip con el contenido de notificationService como raíz del zip
+          # Zippeamos el contenido de notificationService como raíz del zip
           cd notificationService
           zip -r ../deploy.zip . -x "__pycache__/*" ".venv/*" ".git/*"
           cd ..
 
-          # Añadimos requirements.txt (si existe) a la raíz del zip
+          # Añadimos requirements.txt a la raíz del zip si existe
           if [ -f requirements.txt ]; then
             zip -u deploy.zip requirements.txt
           else
             echo "ADVERTENCIA: requirements.txt no encontrado en la raíz"
           fi
 
-          # Listamos contenido para verificar
-          echo "Contenido del zip:"
+          echo "Contenido del zip creado (verificar que aparezca src/main.py y requirements.txt):"
           unzip -l deploy.zip
-          
+
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
@@ -71,7 +74,6 @@ jobs:
     needs: build
     environment:
       name: 'Development'
-      # url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}  # opcional
 
     steps:
       - name: Download artifact from build job
@@ -80,8 +82,11 @@ jobs:
           name: python-app
           path: .
 
-      - name: Unzip artifact
-        run: unzip -o deploy.zip -d deploy_package
+      - name: Verify downloaded artifact (debug)
+        run: |
+          echo "Workspace files:"
+          ls -la
+          if [ -f deploy.zip ]; then echo "deploy.zip found"; unzip -l deploy.zip; else echo "ERROR: deploy.zip not found"; exit 1; fi
 
       - name: 'Deploy to Azure Web App (ZIP)'
         id: deploy-to-webapp
@@ -89,4 +94,4 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./deploy_package
+          package: ./deploy.zip
