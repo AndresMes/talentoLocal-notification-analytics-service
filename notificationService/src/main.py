@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from sqlmodel import SQLModel
 from .config.db import engine
 from .models import Notificacion
-from .routes.notificacion_router import router
+from .routes.notificacion_router import router as router_noty
+from .routes.analytic_router import router as router_analytic
 from fastapi.responses import HTMLResponse
 
 
@@ -46,4 +47,5 @@ def home():
     """
     return HTMLResponse(content=html)
 
-app.include_router(router)
+app.include_router(router_noty)
+app.include_router(router_analytic)
