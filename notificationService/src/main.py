@@ -5,6 +5,7 @@ from .models import Notificacion
 from .routes.notificacion_router import router
 from fastapi.responses import HTMLResponse
 from .routes.postulacion_notificacion_router import router as postulacion_router
+from .routes.oferta_notificacion_router import router as oferta_router
 
 
 app = FastAPI(title="Notification-Service")
@@ -49,3 +50,4 @@ def home():
 
 app.include_router(router)
 app.include_router(postulacion_router)
+app.include_router(oferta_router)
