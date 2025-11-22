@@ -1,6 +1,7 @@
 import os
 from sqlmodel import create_engine
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '../../.env')
 load_dotenv(dotenv_path)
@@ -13,12 +14,17 @@ SYNAPSE_USER = os.getenv("SYNAPSE_USER")
 SYNAPSE_PASSWORD = os.getenv("SYNAPSE_PASSWORD")
 SYNAPSE_DRIVER = os.getenv("SYNAPSE_DRIVER", "ODBC Driver 18 for SQL Server")
 
+encoded_user = quote_plus(SYNAPSE_USER) if SYNAPSE_USER else ""
+encoded_password = quote_plus(SYNAPSE_PASSWORD) if SYNAPSE_PASSWORD else ""
+encoded_driver = quote_plus(SYNAPSE_DRIVER)
+
+
 # Construcción de la cadena de conexión para Synapse
 # Nota: Synapse Analytics requiere configuración especial para transacciones
 synapse_connection_url = (
-    f"mssql+pyodbc://{SYNAPSE_USER}:{SYNAPSE_PASSWORD}"
+    f"mssql+pyodbc://{encoded_user}:{encoded_password}"
     f"@{SYNAPSE_SERVER}:{SYNAPSE_PORT}/{SYNAPSE_DB}"
-    f"?driver={SYNAPSE_DRIVER.replace(' ', '+')}"
+    f"?driver={encoded_driver}"
     f"&Encrypt=yes&TrustServerCertificate=no&Connection+Timeout=30"
 )
 
