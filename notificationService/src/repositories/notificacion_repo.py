@@ -1,7 +1,9 @@
 from sqlmodel import select, Session
-from typing import List, Optional
+from typing import List, Optional, Iterator
 from uuid import UUID
 from ..models.notificacion import Notificacion
+from ..routes.deps.db_session import get_db
+from ..models.notificacionInt import NotificacionInt
 
 class NotificacionRepository:
     def __init__(self, session: Session):
@@ -61,7 +63,28 @@ class NotificacionRepository:
         session.commit()
         session.refresh(notificacion)
         return notificacion
-
+    
+    def create_(self, obj: NotificacionInt) -> NotificacionInt:
+        session_generator: Iterator[Session] = get_db()
+        session: Optional[Session] = None 
+        try:
+            session = next(session_generator)
+            session.add(obj)
+            session.commit()
+            session.refresh(obj)
+            
+            return obj
+            
+        except Exception as e:
+            if session:
+                session.rollback()
+            raise e 
+        
+        finally:
+            try:
+                next(session_generator)
+            except StopIteration:
+                pass
     #FUNCIONES PUT/PATCH
 
     def update(self, session: Session, notificacion: Notificacion) -> Notificacion:

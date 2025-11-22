@@ -20,11 +20,8 @@ class NotificacionAnalyticsRepository:
         """
         query = text("""
             SELECT 
-                id_empresa,
-                id_convocatoria,
-                titulo,
-                total_postulados
-            FROM postulados_por_convocatoria
+                *
+            FROM postulados_por_convocatoria_python
         """)
         
         results = self.session.exec(query).all() #type: ignore
