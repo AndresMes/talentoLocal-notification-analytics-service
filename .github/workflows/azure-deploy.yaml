@@ -1,7 +1,7 @@
 name: Build and deploy Python app to Azure Web App (FastAPI)
 
 env:
-  AZURE_WEBAPP_NAME: talentolocal-notifcaciones 
+  AZURE_WEBAPP_NAME: talentolocal-notifcaciones
   PYTHON_VERSION: '3.11'
 
 on:
@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python version
         uses: actions/setup-python@v4
@@ -29,28 +31,47 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Ajusta la ruta a requirements si está en otra carpeta
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 
-      # Opcional: ejecutar tests aquí
-      #- name: Run tests
-      #  run: pytest -q notificationService || true
-
-      - name: Archive project (pack notificationService folder + requirements)
+      - name: Show repo structure (debug)
         run: |
-          rm -f deploy.zip
-          # copia requirements dentro del folder para que quede junto al código
-          cp requirements.txt notificationService/ || true
-          # metemos el contenido de notificationService en la raíz del zip
-          cd notificationService
-          zip -r ../deploy.zip .
-          cd ..
+          echo "=== Estructura del repositorio ==="
+          ls -la
+          echo ""
+          echo "=== Contenido de notificationService ==="
+          ls -la notificationService/
+          echo ""
+          echo "=== Contenido de notificationService/src ==="
+          ls -la notificationService/src/ || echo "No existe src/"
+
+      - name: Create deployment package
+        run: |
+          echo "=== Creando paquete de deployment ==="
           
-      - name: Upload artifact for deployment jobs
+          # Verificar que notificationService existe
+          if [ ! -d notificationService ]; then
+            echo "ERROR: notificationService no existe"
+            ls -la
+            exit 1
+          fi
+          
+          # Crear el ZIP MANTENIENDO la carpeta notificationService
+          zip -r deploy.zip notificationService requirements.txt -x "*__pycache__*" "*/.venv/*" "*/.git/*" "*/.vscode/*"
+          
+          echo ""
+          echo "=== Contenido del deploy.zip ==="
+          unzip -l deploy.zip | head -50
+          
+          echo ""
+          echo "=== Tamaño del archivo ==="
+          ls -lh deploy.zip
+
+      - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: deploy.zip
+          retention-days: 1
 
   deploy:
     permissions:
@@ -59,7 +80,6 @@ jobs:
     needs: build
     environment:
       name: 'Development'
-      # url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}  # opcional
 
     steps:
       - name: Download artifact from build job
@@ -68,13 +88,36 @@ jobs:
           name: python-app
           path: .
 
-      - name: Unzip artifact
-        run: unzip -o deploy.zip -d deploy_package
+      - name: Verify downloaded artifact
+        run: |
+          echo "=== Archivos descargados ==="
+          ls -la
+          
+          if [ ! -f deploy.zip ]; then
+            echo "ERROR: deploy.zip no encontrado"
+            exit 1
+          fi
+          
+          echo ""
+          echo "=== Contenido del ZIP (primeras 30 líneas) ==="
+          unzip -l deploy.zip | head -30
+          
+          echo ""
+          echo "=== Tamaño del archivo ==="
+          ls -lh deploy.zip
 
-      - name: 'Deploy to Azure Web App (ZIP)'
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./deploy_package
+          package: ./deploy.zip
+
+      - name: Deployment summary
+        run: |
+          echo "=== Deployment completado ==="
+          echo "App URL: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo ""
+          echo "Para ver los logs en tiempo real, ejecuta:"
+          echo "az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group <tu-resource-group>"
