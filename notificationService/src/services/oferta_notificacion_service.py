@@ -71,7 +71,7 @@ class OfertaNotificacionService:
         notificacion_repo: NotificacionRepository,
         oferta_notificada_repo: OfertaNotificadaRepository,
         oferta_analytics_repo: OfertaAnalyticsRepository,
-        profiles_api_url: str = os.getenv('PROFILE-URL') or "",
+        profiles_api_url: str = os.getenv('PROFILE_URL') or "",
         token: str = ""
     ):
         self.notificacion_repo = notificacion_repo
@@ -205,12 +205,12 @@ class OfertaNotificacionService:
         return skills_encontradas
     
     def _login(self) -> str:
-        profile_auth = os.getenv("PROFILE-AUTH")
+        profile_auth = os.getenv("PROFILE_AUTH")
         url = f"{profile_auth}/login"
 
         payload = {
-            "email": str(os.getenv("PROFILE-USER")),
-            "password": str(os.getenv("PROFILE-PASS"))
+            "email": str(os.getenv("PROFILE_USER")),
+            "password": str(os.getenv("PROFILE_PASS"))
         }
 
         with httpx.Client(timeout=30.0) as client:
