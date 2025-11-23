@@ -14,17 +14,17 @@ class NotificacionRepository:
     def get_by_id(self, session: Session, id_: UUID) -> Optional[Notificacion]:
         return session.get(Notificacion, id_)
     
-    def get_by_id_usuario(self, session:Session, id_usuario: int) -> List[Notificacion]:
+    def get_by_id_usuario(self, session:Session, id_usuario: str) -> List[Notificacion]:
         stmt = select(Notificacion).where(Notificacion.id_usuario == id_usuario)
         results = session.exec(stmt)
         return results.all()
     
-    def get_by_id_empresa(self, session:Session, id_empresa: int) -> List[Notificacion]:
+    def get_by_id_empresa(self, session:Session, id_empresa: str) -> List[Notificacion]:
         stmt = select(Notificacion).where(Notificacion.id_empresa == id_empresa)
         results = session.exec(stmt)
         return results.all()
     
-    def get_no_leidas_by_usuario(self, session: Session, id_usuario: int) -> List[Notificacion]:
+    def get_no_leidas_by_usuario(self, session: Session, id_usuario: str) -> List[Notificacion]:
         """Obtener notificaciones no leídas de un usuario"""
         stmt = (
             select(Notificacion)
@@ -35,7 +35,7 @@ class NotificacionRepository:
         results = session.exec(stmt)
         return results.all()
 
-    def get_no_leidas_by_empresa(self, session: Session, id_empresa: int) -> List[Notificacion]:
+    def get_no_leidas_by_empresa(self, session: Session, id_empresa: str) -> List[Notificacion]:
         """Obtener notificaciones no leídas de una empresa"""
         stmt = (
             select(Notificacion)
