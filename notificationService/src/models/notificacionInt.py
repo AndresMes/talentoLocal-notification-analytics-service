@@ -1,4 +1,4 @@
-# notificationService/src/models/notificacion.py
+# notificationService/src/models/notificacionInt.py
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime
@@ -6,8 +6,9 @@ from datetime import datetime
 from sqlmodel import SQLModel, Field
 
 
-class Notificacion(SQLModel, table=True):
-    __tablename__:str = "notificaciones"
+class NotificacionInt(SQLModel, table=True):
+    __tablename__: str = "notificaciones"
+    __table_args__ = {'extend_existing': True}
 
     id_notificacion: int | None = Field(default=None, primary_key=True)
 
@@ -19,7 +20,7 @@ class Notificacion(SQLModel, table=True):
     mensaje: str
 
     id_oferta: int = Field(nullable=False)
-    prioridad: str | None = None
+    prioridad: int | None = None
     datos_adicionales: str | None = None
 
     leida: bool = Field(default=False) 
