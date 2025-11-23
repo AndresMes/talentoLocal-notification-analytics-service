@@ -30,7 +30,7 @@ class ConvocatoriaSnapshotRepository:
         stmt = select(ConvocatoriaSnapshot)
         return list(self.session.exec(stmt).all())
     
-    def get_snapshots_por_empresa(self, id_empresa: int) -> List[ConvocatoriaSnapshot]:
+    def get_snapshots_por_empresa(self, id_empresa: str) -> List[ConvocatoriaSnapshot]:
         """Obtiene todos los snapshots de una empresa"""
         stmt = select(ConvocatoriaSnapshot).where(
             ConvocatoriaSnapshot.id_empresa == id_empresa
@@ -39,7 +39,7 @@ class ConvocatoriaSnapshotRepository:
     
     def crear_o_actualizar_sanpshot(
             self,
-            id_empresa: int,
+            id_empresa: str,
             id_convocatoria: int,
             titulo: str,
             total_postulados: int
