@@ -2,6 +2,7 @@ import os
 from urllib.parse import quote_plus
 from sqlmodel import create_engine
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '../../.env')
 load_dotenv(dotenv_path)
@@ -18,6 +19,7 @@ SYNAPSE_DRIVER = os.getenv("SYNAPSE_DRIVER", "ODBC Driver 18 for SQL Server")
 encoded_user = quote_plus(SYNAPSE_USER) if SYNAPSE_USER else ""
 encoded_password = quote_plus(SYNAPSE_PASSWORD) if SYNAPSE_PASSWORD else ""
 encoded_driver = quote_plus(SYNAPSE_DRIVER)
+
 
 # Construcción de la cadena de conexión para Synapse
 synapse_connection_url = (

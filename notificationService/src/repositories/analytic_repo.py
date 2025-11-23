@@ -36,3 +36,50 @@ class NotificacionAnalyticsRepository:
             for row in results
         ]
     
+    def get_cant_empleos_publicados(
+        self,
+    ) -> int:
+        """
+        Obtener la cantidad de empleos (ofertas) publicadas
+        """
+        query = text("""
+            SELECT COUNT(id) as cantidad_ofertas
+            FROM ofertas_python                
+            WHERE closing_date IS NOT NULL
+        """)
+
+        results = self.session.exec(query).scalar() # type: ignore
+
+        return results or 0
+    
+    def get_cant_empresas(
+        self,
+    ) -> int:
+        """
+        Obtener la cantidad de empresas activas
+        """
+        query = text("""
+            SELECT COUNT(empresa_id) as cantidad_empresas
+            FROM mock_empresas_python
+        """)
+
+        results = self.session.exec(query).scalar() # type: ignore
+
+        return results or 0
+    
+    def get_cant_usuarios(
+        self,
+    ) -> int:
+        """
+        Obtener la cantidad de usuarios
+        """
+        query = text("""
+            SELECT COUNT(usuario_id) as cantidad_usuarios
+            FROM mock_usuarios_python
+        """)
+
+        results = self.session.exec(query).scalar() # type: ignore
+
+        return results or 0
+    
+    
