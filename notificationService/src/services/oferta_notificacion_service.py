@@ -205,7 +205,8 @@ class OfertaNotificacionService:
         return skills_encontradas
     
     def _login(self) -> str:
-        url = f"{os.getenv("PROFILE-AUTH")}/login"
+        profile_auth = os.getenv("PROFILE-AUTH")
+        url = f"{profile_auth}/login"
 
         payload = {
             "email": str(os.getenv("PROFILE-USER")),
