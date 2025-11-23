@@ -116,7 +116,7 @@ class PostulacionNotificacionService:
             mensaje = f"Tienes {cantidad} nuevas postulaciones en '{titulo}'. Total: {incremento.total_actual}"
         
         notificacion = NotificacionInt(
-            id_usuario='', 
+            id_usuario='0', 
             id_empresa=str(incremento.id_empresa),
             tipo_notificacion="NUEVA_POSTULACION",
             asunto=f"Nuevas postulaciones en {titulo}",
