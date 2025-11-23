@@ -25,13 +25,13 @@ class NotificacionService:
         results = self.notificacionRepository.get_by_status(session)
         return [NotificacionResponseDTO.model_validate(e) for e in results]
     
-    def listar_dado_id_usuario(self, session: Session, id_usuario:int) -> List[NotificacionResponseDTO]:
+    def listar_dado_id_usuario(self, session: Session, id_usuario:str) -> List[NotificacionResponseDTO]:
         
         # Poner validación de ID cuando se tenga acceso
         results = self.notificacionRepository.get_by_id_usuario(session, id_usuario)
         return [NotificacionResponseDTO.model_validate(e) for e in results]
     
-    def listar_dado_id_empresa(self, session: Session, id_empresa:int) -> List[NotificacionResponseDTO]:
+    def listar_dado_id_empresa(self, session: Session, id_empresa:str) -> List[NotificacionResponseDTO]:
         
         # Poner validación de ID cuando se tenga acceso
         results = self.notificacionRepository.get_by_id_empresa(session, id_empresa)
@@ -66,7 +66,7 @@ class NotificacionService:
         notificacion_actualizada = self.notificacionRepository.update(session, entidad)
         return NotificacionResponseDTO.model_validate(notificacion_actualizada)
     
-    def marcar_todas_leidas_usuario(self, session: Session, id_usuario: int) -> dict:
+    def marcar_todas_leidas_usuario(self, session: Session, id_usuario: str) -> dict:
         """Marcar todas las notificaciones de un usuario como leídas"""
         notificaciones = self.notificacionRepository.get_no_leidas_by_usuario(session, id_usuario)
         
@@ -88,7 +88,7 @@ class NotificacionService:
             "cantidad_actualizada": len(notificaciones)
         }
 
-    def marcar_todas_leidas_empresa(self, session: Session, id_empresa: int) -> dict:
+    def marcar_todas_leidas_empresa(self, session: Session, id_empresa: str) -> dict:
         """Marcar todas las notificaciones de una empresa como leídas"""
         notificaciones = self.notificacionRepository.get_no_leidas_by_empresa(session, id_empresa)
         

@@ -284,10 +284,10 @@ class OfertaNotificacionService:
                     id_empresa=id_empresa,  # Convertido a string
                     tipo_notificacion="NUEVA_OFERTA_COMPATIBLE",
                     asunto=f"Nueva oferta: {oferta_data['title']}",
-                    mensaje=f"Hay una nueva oferta que coincide con tu perfil: '{oferta_data['title']}' en {oferta_data['location']}. Salario: ${oferta_data['salary']}",
+                    mensaje=f"Hay una nueva oferta que coincide con tu perfil: '{oferta_data['title']}' en {oferta_data['location']}.&Salario: ${oferta_data['salary']}",
                     id_oferta=oferta_data['id'],
                     prioridad=prioridad,
-                    datos_adicionales=f"modalidad:{oferta_data['modality']},ubicacion:{oferta_data['location']}",
+                    datos_adicionales=f"modalidad:{oferta_data['modality']}&ubicacion:{oferta_data['location']}",
                     leida=False
                 )
                 

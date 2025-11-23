@@ -61,11 +61,11 @@ def obtener_notificacion(
         )
     
 @router.get("/{id_usuario}/user/all", response_model=List[NotificacionResponseDTO], status_code=status.HTTP_200_OK)
-def obterner_todas_por_usuario(id_usuario:int, session: Session = Depends(get_db), service: NotificacionService = Depends(get_notificacion_service)):
+def obterner_todas_por_usuario(id_usuario:str, session: Session = Depends(get_db), service: NotificacionService = Depends(get_notificacion_service)):
     return service.listar_dado_id_usuario(session, id_usuario)
 
 @router.get("/{id_empresa}/company/all", response_model=List[NotificacionResponseDTO], status_code=status.HTTP_200_OK)
-def obtener_todas_por_empresa(id_empresa:int, session: Session = Depends(get_db), service: NotificacionService = Depends(get_notificacion_service)):
+def obtener_todas_por_empresa(id_empresa:str, session: Session = Depends(get_db), service: NotificacionService = Depends(get_notificacion_service)):
     return service.listar_dado_id_empresa(session, id_empresa)
 
 
@@ -99,7 +99,7 @@ def marcar_notificacion_leida(
 
 @router.patch("/usuario/{id_usuario}/marcar-todas-leidas", status_code=status.HTTP_200_OK)
 def marcar_todas_leidas_usuario(
-    id_usuario: int,
+    id_usuario: str,
     session: Session = Depends(get_db),
     service: NotificacionService = Depends(get_notificacion_service)
 ):
@@ -109,7 +109,7 @@ def marcar_todas_leidas_usuario(
 
 @router.patch("/empresa/{id_empresa}/marcar-todas-leidas", status_code=status.HTTP_200_OK)
 def marcar_todas_leidas_empresa(
-    id_empresa: int,
+    id_empresa: str,
     session: Session = Depends(get_db),
     service: NotificacionService = Depends(get_notificacion_service)
 ):
