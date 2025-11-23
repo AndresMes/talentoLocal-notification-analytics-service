@@ -11,8 +11,8 @@ from ..repositories.oferta_analitycs_repo import OfertaAnalyticsRepository
 
 
 router = APIRouter(
-    prefix="/procesamiento",
-    tags=["Procesamiento Automático"]
+    prefix="/procesamiento-ofertas",  # ← Cambiar a prefijo único
+    tags=["Procesamiento de Ofertas"]
 )
 
 
@@ -33,7 +33,7 @@ def get_oferta_service(
 
 
 @router.post(
-    "/notificar-ofertas-compatibles",
+    "/notificar-compatibles",
     response_model=Dict,
     status_code=status.HTTP_200_OK,
     summary="Notificar a usuarios sobre ofertas compatibles",
@@ -47,9 +47,9 @@ def get_oferta_service(
     4. Crea notificaciones para cada usuario compatible
     5. Marca la oferta como procesada para evitar duplicados
     
-    **Ejemplo de uso:**
-    - Ejecutar diariamente (ej: cada 24 horas)
-    - Los usuarios ven notificaciones en `/notificaciones/{id_usuario}/user/all`
+    **Parámetros:**
+    - dias_atras: Ventana de tiempo (1-30 días)
+    - solo_analizar: Si es true, solo analiza sin llamar al API ni crear notificaciones (útil para debug)
     """
 )
 def notificar_ofertas_compatibles(
@@ -59,26 +59,27 @@ def notificar_ofertas_compatibles(
         le=30,
         description="Ventana de tiempo en días para buscar ofertas nuevas (1-30 días)"
     ),
+    solo_analizar: bool = Query(
+        default=False,
+        description="Solo analizar ofertas sin llamar al API ni crear notificaciones (debug)"
+    ),
     session: Session = Depends(get_db),
     service: OfertaNotificacionService = Depends(get_oferta_service)
 ):
     """
     Endpoint para procesar ofertas y notificar a usuarios compatibles.
-    
-    Args:
-        dias_atras: Días hacia atrás para buscar ofertas
-        session: Sesión de BD
-        service: Servicio de procesamiento
-        
-    Returns:
-        Resumen con notificaciones creadas
     """
-    resultado = service.procesar_nuevas_ofertas(session, dias_atras)
-    return resultado
+    if solo_analizar:
+        # Modo debug: solo analizar ofertas y extraer skills
+        return service.analizar_ofertas_sin_notificar(session, dias_atras)
+    else:
+        # Modo normal: procesar todo
+        resultado = service.procesar_nuevas_ofertas(session, dias_atras)
+        return resultado
 
 
 @router.get(
-    "/estadisticas-ofertas-notificadas",
+    "/estadisticas",  # ← Simplificado
     response_model=Dict,
     status_code=status.HTTP_200_OK,
     summary="Obtener estadísticas de ofertas notificadas"

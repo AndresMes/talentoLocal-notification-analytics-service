@@ -112,49 +112,71 @@ class OfertaNotificacionService:
         # 3. Procesar cada oferta
         total_notificaciones = 0
         detalles = []
+        errores = []
         
         for oferta_data in ofertas_nuevas:
-            # Extraer skills de los requirements
-            skills = self._extraer_skills(oferta_data['requirements'])
-            
-            if not skills:
-                # Si no hay skills reconocibles, skip
+            try:
+                # Extraer skills de los requirements
+                skills = self._extraer_skills(oferta_data['requirements'])
+                
+                if not skills:
+                    print(f"⚠️  Oferta {oferta_data['id']} sin skills reconocibles, skip")
+                    continue
+                
+                # Limitar a las primeras 10 skills para evitar URLs muy largas
+                skills_limitadas = skills[:10]
+                if len(skills) > 10:
+                    print(f"⚠️  Oferta {oferta_data['id']} tiene {len(skills)} skills, usando solo las primeras 10")
+                
+                # Buscar usuarios compatibles
+                usuarios_compatibles = self._buscar_usuarios_compatibles(skills_limitadas)
+                
+                if usuarios_compatibles:
+                    # Crear notificaciones para cada usuario
+                    notificaciones_creadas = self._crear_notificaciones_oferta(
+                        oferta_data,
+                        usuarios_compatibles
+                    )
+                    
+                    total_notificaciones += notificaciones_creadas
+                    
+                    # Marcar oferta como notificada
+                    self.oferta_notificada_repo.marcar_como_notificada(
+                        id_oferta=oferta_data['id'],
+                        id_empresa=str(oferta_data['company_id']),
+                        titulo=oferta_data['title'],
+                        fecha_publicacion=oferta_data['publication_date'],
+                        usuarios_notificados=notificaciones_creadas
+                    )
+                    
+                    detalles.append({
+                        "id_oferta": oferta_data['id'],
+                        "titulo": oferta_data['title'],
+                        "skills_encontradas": len(skills),
+                        "skills_usadas": len(skills_limitadas),
+                        "usuarios_notificados": notificaciones_creadas
+                    })
+                else:
+                    print(f"ℹ️  Oferta {oferta_data['id']}: No se encontraron usuarios compatibles")
+                    
+            except Exception as e:
+                error_msg = f"Error procesando oferta {oferta_data.get('id', 'unknown')}: {str(e)}"
+                print(f"❌ {error_msg}")
+                errores.append(error_msg)
                 continue
-            
-            # Buscar usuarios compatibles
-            usuarios_compatibles = self._buscar_usuarios_compatibles(skills)
-            
-            if usuarios_compatibles:
-                # Crear notificaciones para cada usuario
-                notificaciones_creadas = self._crear_notificaciones_oferta(
-                    oferta_data,
-                    usuarios_compatibles
-                )
-                
-                total_notificaciones += notificaciones_creadas
-                
-                # Marcar oferta como notificada
-                self.oferta_notificada_repo.marcar_como_notificada(
-                    id_oferta=oferta_data['id'],
-                    id_empresa=oferta_data['company_id'],
-                    titulo=oferta_data['title'],
-                    fecha_publicacion=oferta_data['publication_date'],
-                    usuarios_notificados=notificaciones_creadas
-                )
-                
-                detalles.append({
-                    "id_oferta": oferta_data['id'],
-                    "titulo": oferta_data['title'],
-                    "skills_encontradas": len(skills),
-                    "usuarios_notificados": notificaciones_creadas
-                })
         
-        return {
+        resultado = {
             "mensaje": f"Se procesaron {len(ofertas_nuevas)} ofertas nuevas",
             "notificaciones_creadas": total_notificaciones,
             "ofertas_procesadas": len(ofertas_nuevas),
+            "ofertas_con_usuarios": len(detalles),
             "detalle": detalles
         }
+        
+        if errores:
+            resultado["errores"] = errores
+        
+        return resultado
     
     def _extraer_skills(self, requirements_text: str) -> List[str]:
         """
@@ -192,28 +214,45 @@ class OfertaNotificacionService:
             skills_param = ",".join(skills)
             url = f"{self.profiles_api_url}/{skills_param}"
             
-            # Hacer la petición
-            with httpx.Client(timeout=30.0) as client:
-                response = client.get(url)
+            print(f"🔍 Consultando API de perfiles: {url[:100]}...")  # Log para debug
+
+            token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsInVpZCI6Ijc1ZDQ0ZjhmLTViOTEtNDRkNC05ZDY4LTA5Zjg0Mjc4ZDVhNiIsInJvbGVzIjpbXSwiaWF0IjoxNzYzODU2NDUwLCJleHAiOjE3NjM5NDI4NTB9.pdJ-KQtHYmSOzDHd8zeC3bQbMJYZ7AaJoHQwheicOuc"
+            
+            # Hacer la petición con timeout más largo y reintentos
+            with httpx.Client(timeout=60.0) as client:  # Aumentado a 60 segundos
+                response = client.get(
+                    url,
+                    headers={"Authorization": f"Bearer {token}"}
+                                      )
                 response.raise_for_status()
                 
                 # Parsear respuesta
                 data = response.json()
                 
+                print(f"✅ API respondió con {len(data) if isinstance(data, list) else 'datos'}")
+                
                 # Extraer IDs de usuarios
                 # Ajusta según la estructura real de la respuesta del API
                 if isinstance(data, list):
-                    return [perfil.get('id') for perfil in data if perfil.get('id')]
+                    usuarios = [perfil.get('id') for perfil in data if perfil.get('id')]
+                    return usuarios
                 elif isinstance(data, dict) and 'profiles' in data:
-                    return [perfil.get('id') for perfil in data['profiles'] if perfil.get('id')]
+                    usuarios = [perfil.get('id') for perfil in data['profiles'] if perfil.get('id')]
+                    return usuarios
                 else:
+                    print(f"⚠️  Formato de respuesta inesperado: {type(data)}")
                     return []
                 
+        except httpx.TimeoutException as e:
+            print(f"⏱️  Timeout al consultar API de perfiles (más de 60s): {url[:100]}")
+            print(f"   Considera reducir la cantidad de skills o aumentar el timeout")
+            return []
         except httpx.HTTPError as e:
-            print(f"Error al consultar API de perfiles: {e}")
+            print(f"❌ Error HTTP al consultar API de perfiles: {e}")
+            print(f"   URL: {url[:100]}")
             return []
         except Exception as e:
-            print(f"Error inesperado: {e}")
+            print(f"❌ Error inesperado: {e}")
             return []
     
     def _crear_notificaciones_oferta(
@@ -261,3 +300,52 @@ class OfertaNotificacionService:
                 continue
         
         return notificaciones_creadas
+    
+    def analizar_ofertas_sin_notificar(self, session: Session, dias_atras: int = 7) -> Dict[str, Any]:
+        """
+        Analiza ofertas y extrae skills SIN llamar al API ni crear notificaciones.
+        Útil para debugging y ver qué skills se están extrayendo.
+        
+        Returns:
+            Resumen con ofertas y skills encontradas
+        """
+        ofertas_recientes = self.oferta_analytics_repo.get_ofertas_activas_recientes(dias_atras)
+        
+        if not ofertas_recientes:
+            return {
+                "mensaje": "No hay ofertas nuevas para analizar",
+                "ofertas_analizadas": 0
+            }
+        
+        ids_ofertas = [o['id'] for o in ofertas_recientes]
+        ids_ya_notificados = self.oferta_notificada_repo.get_ids_ya_notificados(ids_ofertas)
+        
+        ofertas_nuevas = [
+            o for o in ofertas_recientes 
+            if o['id'] not in ids_ya_notificados
+        ]
+        
+        analisis = []
+        total_skills = 0
+        
+        for oferta_data in ofertas_nuevas:
+            skills = self._extraer_skills(oferta_data['requirements'])
+            total_skills += len(skills)
+            
+            analisis.append({
+                "id_oferta": oferta_data['id'],
+                "titulo": oferta_data['title'],
+                "company_id": oferta_data['company_id'],
+                "requirements_preview": oferta_data['requirements'][:200] + "..." if len(oferta_data['requirements']) > 200 else oferta_data['requirements'],
+                "skills_encontradas": len(skills),
+                "skills": skills[:10],  # Solo las primeras 10
+                "total_skills": len(skills)
+            })
+        
+        return {
+            "mensaje": f"Análisis completado (sin notificar)",
+            "ofertas_analizadas": len(ofertas_nuevas),
+            "total_skills_encontradas": total_skills,
+            "promedio_skills_por_oferta": round(total_skills / len(ofertas_nuevas), 2) if ofertas_nuevas else 0,
+            "ofertas": analisis
+        }
