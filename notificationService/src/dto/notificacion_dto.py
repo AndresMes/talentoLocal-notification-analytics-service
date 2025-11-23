@@ -16,7 +16,7 @@ class NotificacionCreateDTO(BaseModel):
 
 
 class NotificacionResponseDTO(BaseModel):
-    id_notificacion: int
+    id_notificacion: str
     id_usuario: str  # UUID como string
     id_empresa: str  # UUID como string
     tipo_notificacion: str 
