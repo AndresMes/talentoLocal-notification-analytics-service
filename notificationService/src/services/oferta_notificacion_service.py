@@ -1,7 +1,10 @@
 from sqlmodel import Session
 from typing import List, Dict, Any
+from dotenv import load_dotenv
+from httpx import QueryParams
 import httpx
 import re
+import os
 
 from ..repositories.notificacion_repo import NotificacionRepository
 from ..repositories.oferta_notificada_repo import OfertaNotificadaRepository
@@ -54,6 +57,9 @@ PRIORIDAD_MAP = {
     "URGENTE": 3
 }
 
+dotenv = dotenv_path = os.path.join(os.path.dirname(__file__), '../../.env')
+load_dotenv(dotenv)
+
 
 class OfertaNotificacionService:
     """
@@ -65,12 +71,14 @@ class OfertaNotificacionService:
         notificacion_repo: NotificacionRepository,
         oferta_notificada_repo: OfertaNotificadaRepository,
         oferta_analytics_repo: OfertaAnalyticsRepository,
-        profiles_api_url: str = "https://profiles-auth-fadbasetc6fja8hs.westus3-01.azurewebsites.net/api/v1/profile"
+        profiles_api_url: str = os.getenv('PROFILE_URL') or "",
+        token: str = ""
     ):
         self.notificacion_repo = notificacion_repo
         self.oferta_notificada_repo = oferta_notificada_repo
         self.oferta_analytics_repo = oferta_analytics_repo
         self.profiles_api_url = profiles_api_url
+        self.token = token
     
     def procesar_nuevas_ofertas(self, session: Session, dias_atras: int = 7) -> Dict[str, Any]:
         """
@@ -196,65 +204,82 @@ class OfertaNotificacionService:
         
         return skills_encontradas
     
-    def _buscar_usuarios_compatibles(self, skills: List[str]) -> List[str]:  # Retorna UUIDs como strings
-        """
-        Llama al API de perfiles para obtener usuarios que tengan las skills.
-        
-        Args:
-            skills: Lista de skills a buscar
-            
-        Returns:
-            Lista de UUIDs de usuarios compatibles (como strings)
-        """
+    def _login(self) -> str:
+        profile_auth = os.getenv("PROFILE_AUTH")
+        url = f"{profile_auth}/login"
+
+        payload = {
+            "email": str(os.getenv("PROFILE_USER")),
+            "password": str(os.getenv("PROFILE_PASS"))
+        }
+
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(url, json=payload)
+            response.raise_for_status()
+
+            data = response.json()
+            token = data.get("token")
+
+            if not token:
+                raise Exception("Login exitoso pero no llegó token.")
+
+            print("🔐 Nuevo token obtenido por login.")
+            return token
+
+    
+    def _buscar_usuarios_compatibles(self, skills: List[str]) -> List[str]:
         if not skills:
             return []
         
-        try:
-            # Construir la URL con las skills
-            skills_param = ",".join(skills)
-            url = f"{self.profiles_api_url}/{skills_param}"
-            
-            print(f"🔍 Consultando API de perfiles: {url[:100]}...")  # Log para debug
+        if not self.token:
+            print("🔐 No hay token. Haciendo login inicial...")
+            self.token = self._login()
 
-            token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsInVpZCI6Ijc1ZDQ0ZjhmLTViOTEtNDRkNC05ZDY4LTA5Zjg0Mjc4ZDVhNiIsInJvbGVzIjpbXSwiaWF0IjoxNzYzODU2NDUwLCJleHAiOjE3NjM5NDI4NTB9.pdJ-KQtHYmSOzDHd8zeC3bQbMJYZ7AaJoHQwheicOuc"
-            
-            # Hacer la petición con timeout más largo y reintentos
-            with httpx.Client(timeout=60.0) as client:  # Aumentado a 60 segundos
-                response = client.get(
-                    url,
-                    headers={"Authorization": f"Bearer {token}"}
-                                      )
-                response.raise_for_status()
-                
-                # Parsear respuesta
-                data = response.json()
-                
-                print(f"✅ API respondió con {len(data) if isinstance(data, list) else 'datos'}")
-                
-                # Extraer IDs de usuarios
-                # Ajusta según la estructura real de la respuesta del API
-                if isinstance(data, list):
-                    usuarios = [perfil.get('id') for perfil in data if perfil.get('id')]
-                    return usuarios
-                elif isinstance(data, dict) and 'profiles' in data:
-                    usuarios = [perfil.get('id') for perfil in data['profiles'] if perfil.get('id')]
-                    return usuarios
-                else:
-                    print(f"⚠️  Formato de respuesta inesperado: {type(data)}")
-                    return []
-                
-        except httpx.TimeoutException as e:
-            print(f"⏱️  Timeout al consultar API de perfiles (más de 60s): {url[:100]}")
-            print(f"   Considera reducir la cantidad de skills o aumentar el timeout")
+        # Generamos params como una lista de tuplas repetidas:
+        # [("names", "SQL"), ("names", "Docker")]
+        params = QueryParams([("names", s) for s in skills])
+
+        base_url = f"{self.profiles_api_url}/skill"
+
+        def _do_request(token):
+            with httpx.Client(timeout=60.0) as client:
+                return client.get(
+                    base_url,
+                    params=params,  # <- AQUI LA MAGIA
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+
+        try:
+            response = _do_request(self.token)
+
+            # Si el token expiró
+            if response.status_code == 403:
+                print("🔄 Token expirado. Intentando login...")
+                self.token = self._login()
+                response = _do_request(self.token)
+
+            response.raise_for_status()
+            data = response.json()
+
+            print(f"✅ API respondió con {len(data) if isinstance(data, list) else 'datos'}")
+
+            if isinstance(data, list):
+                return [x.get("id") for x in data if x.get("id")]
+
+            if isinstance(data, dict) and "profiles" in data:
+                return [x.get("id") for x in data["profiles"] if x.get("id")]
+
+            print(f"⚠️ Formato inesperado: {type(data)}")
             return []
-        except httpx.HTTPError as e:
-            print(f"❌ Error HTTP al consultar API de perfiles: {e}")
-            print(f"   URL: {url[:100]}")
+
+        except httpx.HTTPStatusError as e:
+            print(f"❌ Error HTTP: {e}")
+            print(f"Token: {self.token}")
             return []
         except Exception as e:
             print(f"❌ Error inesperado: {e}")
             return []
-    
+
     def _crear_notificaciones_oferta(
         self,
         oferta_data: Dict,
