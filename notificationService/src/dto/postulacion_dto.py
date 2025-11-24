@@ -11,7 +11,7 @@ class ConvocatoriaPostuladosDTO(BaseModel):
 
 class IncrementoPostulacionesDTO(BaseModel):
     """DTO para representar el incremento de postulaciones en una convocatoria"""
-    id_empresa: int
+    id_empresa: str
     id_convocatoria: int
     titulo: str
     total_anterior: int
